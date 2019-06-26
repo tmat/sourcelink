@@ -53,8 +53,7 @@ namespace Microsoft.Build.Tasks.Git
 
         public static GitEnvironment CreateFromProcessEnvironment()
         {
-            var systemDir = PathUtils.IsUnixLikePlatform ? "/etc" : 
-                Path.Combine(FindWindowsGitInstallation(), "mingw64", "etc");
+            var systemDir = PathUtils.IsUnixLikePlatform ? "/etc" : Path.Combine(FindWindowsGitInstallation(), "etc");
 
             return new GitEnvironment(
                 homeDirectory: Environment.GetFolderPath(Environment.SpecialFolder.UserProfile, Environment.SpecialFolderOption.DoNotVerify),

@@ -84,11 +84,11 @@ namespace Microsoft.Build.Tasks.Git
                 }
 
                 // system
-                var systemDir = _environment.SystemDirectory;
+                var systemDir = GetSystemConfigurationDirectory();
                 if (systemDir != null)
                 {
                     var systemConfig = Path.Combine(systemDir, "gitconfig");
-                    if (systemConfig != null)
+                    if (File.Exists(systemConfig))
                     {
                         yield return systemConfig;
                     }
@@ -116,6 +116,27 @@ namespace Microsoft.Build.Tasks.Git
                 }
 
                 // TODO: worktree config
+            }
+
+            private string GetSystemConfigurationDirectory()
+            {
+                if (_environment.SystemDirectory == null)
+                {
+                    return null;
+                }
+
+                if (!PathUtils.IsUnixLikePlatform)
+                {
+                    // Git for Windows stores gitconfig under [install dir]\mingw64\etc,
+                    // but other Git Windows implementations use [install dir]\etc.
+                    var mingwEtc = Path.Combine(_environment.SystemDirectory, "..", "mingw64", "etc");
+                    if (Directory.Exists(mingwEtc))
+                    {
+                        return mingwEtc;
+                    }
+                }
+
+                return _environment.SystemDirectory;
             }
 
             /// <exception cref="IOException"/>

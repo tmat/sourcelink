@@ -25,6 +25,8 @@ namespace Microsoft.Build.Tasks.Git
 
         public GitConfig Config { get; }
 
+        public SshConfig SshConfig { get; }
+
         public GitIgnore Ignore => _lazyIgnore.Value;
 
         /// <summary>
@@ -48,15 +50,17 @@ namespace Microsoft.Build.Tasks.Git
         private readonly Lazy<GitIgnore> _lazyIgnore;
         private readonly Lazy<string> _lazyHeadCommitSha;
 
-        internal GitRepository(GitEnvironment environment, GitConfig config, string gitDirectory, string commonDirectory, string workingDirectory)
+        internal GitRepository(GitEnvironment environment, GitConfig config, SshConfig sshConfig, string gitDirectory, string commonDirectory, string workingDirectory)
         {
             Debug.Assert(environment != null);
             Debug.Assert(config != null);
+            Debug.Assert(sshConfig != null);
             Debug.Assert(PathUtils.IsNormalized(gitDirectory));
             Debug.Assert(PathUtils.IsNormalized(commonDirectory));
             Debug.Assert(workingDirectory == null || PathUtils.IsNormalized(workingDirectory));
 
             Config = config;
+            SshConfig = sshConfig;
             GitDirectory = gitDirectory;
             CommonDirectory = commonDirectory;
             WorkingDirectory = workingDirectory;
@@ -71,6 +75,7 @@ namespace Microsoft.Build.Tasks.Git
         internal GitRepository(
             GitEnvironment environment,
             GitConfig config,
+            SshConfig sshConfig,
             string gitDirectory,
             string commonDirectory,
             string workingDirectory,
@@ -78,7 +83,7 @@ namespace Microsoft.Build.Tasks.Git
             ImmutableArray<string> submoduleDiagnostics,
             GitIgnore ignore,
             string headCommitSha)
-            : this(environment, config, gitDirectory, commonDirectory, workingDirectory)
+            : this(environment, config, sshConfig, gitDirectory, commonDirectory, workingDirectory)
         {
             _lazySubmodules = new Lazy<(ImmutableArray<GitSubmodule>, ImmutableArray<string>)>(() => (submodules, submoduleDiagnostics));
             _lazyIgnore = new Lazy<GitIgnore>(() => ignore);
@@ -129,8 +134,7 @@ namespace Microsoft.Build.Tasks.Git
 
             // See https://git-scm.com/docs/gitrepository-layout
 
-            var reader = new GitConfig.Reader(location.GitDirectory, location.CommonDirectory, environment);
-            var config = reader.Load();
+            var config = new GitConfig.Reader(location.GitDirectory, location.CommonDirectory, environment).Load();
 
             var workingDirectory = GetWorkingDirectory(config, location.GitDirectory, location.CommonDirectory) ?? location.WorkingDirectory;
 
@@ -141,7 +145,10 @@ namespace Microsoft.Build.Tasks.Git
                 throw new NotSupportedException(string.Format(Resources.UnsupportedRepositoryVersion, versionStr, SupportedGitRepoFormatVersion));
             }
 
-            return new GitRepository(environment, config, location.GitDirectory, location.CommonDirectory, workingDirectory);
+            // TODO: lazy - only needed when processing SSH URLs
+            var sshConfig = new SshConfig.Reader(environment).Load();
+
+            return new GitRepository(environment, config, sshConfig, location.GitDirectory, location.CommonDirectory, workingDirectory);
         }
 
         // internal for testing
